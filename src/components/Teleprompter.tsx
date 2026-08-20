@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
 
@@ -41,16 +42,21 @@ const TextBlock = styled.div`
   box-sizing: border-box;
 `
 
-const Sentence = styled.p`
+const Sentence = styled.p<{ $active: boolean }>`
   font-family: sans-serif;
   font-size: 1.25rem;
   line-height: 1.8;
   color: #1a1a1a;
   margin: 0 0 1.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  background: ${(p) => (p.$active ? '#fef08a' : 'transparent')};
 `
 
 export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const sentences = chunkSentences(text)
+  const [currentIndex, setCurrentIndex] = useState(0)
 
   return (
     <Overlay>
@@ -59,7 +65,13 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
       </TopBar>
       <TextBlock>
         {sentences.map((sentence, index) => (
-          <Sentence key={index}>{sentence}</Sentence>
+          <Sentence
+            key={index}
+            $active={index === currentIndex}
+            onClick={() => setCurrentIndex(index)}
+          >
+            {sentence}
+          </Sentence>
         ))}
       </TextBlock>
     </Overlay>
