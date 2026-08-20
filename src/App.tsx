@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styled from 'styled-components'
 import SpeechEditor from './components/SpeechEditor'
 import Teleprompter from './components/Teleprompter'
+import MicSupportBanner from './components/MicSupportBanner'
 
 type Mode = 'edit' | 'speaker'
 
@@ -36,14 +37,17 @@ export default function App() {
     setMode('edit')
   }
 
-  if (mode === 'speaker') {
-    return <Teleprompter text={speakerText} onBack={handleBack} />
-  }
-
   return (
-    <Page>
-      <Title>Speak Track</Title>
-      <SpeechEditor onStartSpeaking={handleStartSpeaking} />
-    </Page>
+    <>
+      <MicSupportBanner />
+      {mode === 'speaker' ? (
+        <Teleprompter text={speakerText} onBack={handleBack} />
+      ) : (
+        <Page>
+          <Title>Speak Track</Title>
+          <SpeechEditor onStartSpeaking={handleStartSpeaking} />
+        </Page>
+      )}
+    </>
   )
 }
