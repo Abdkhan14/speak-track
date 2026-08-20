@@ -2,6 +2,11 @@
 // to embedding. Reused by the follow loop in later PRs.
 export const WORD_FOLLOW_THRESHOLD = 0.45
 
+// How much better the new winner must score over the current line before the
+// highlight is allowed to jump more than one sentence. Prevents flickering when
+// two nearby lines share common words.
+export const STICKINESS_MARGIN = 0.15
+
 // Normalises a string into a list of lowercase alphanumeric tokens.
 // Strips punctuation so "hello," matches "hello" across script and transcript.
 export function tokenize(s: string): string[] {
@@ -15,6 +20,23 @@ export function overlapScore(heard: string[], line: string): number {
   const set = new Set(tokenize(line))
   if (heard.length === 0) return 0
   return heard.filter((w) => set.has(w)).length / heard.length
+}
+
+// Applies stickiness: the new winner index is accepted when:
+//   - it equals cursor (no movement)
+//   - it is exactly cursor + 1 (natural forward progress)
+//   - its score beats the current line's score by more than margin (clear win)
+// Any other case keeps the cursor in place to avoid flickering.
+export function sticky(
+  cursor: number,
+  winner: { index: number; score: number },
+  currentScore: number,
+  margin = STICKINESS_MARGIN,
+): number {
+  if (winner.index === cursor) return cursor
+  if (winner.index === cursor + 1) return winner.index
+  if (winner.score > currentScore + margin) return winner.index
+  return cursor
 }
 
 // Finds the best-matching sentence index within a window around the cursor.

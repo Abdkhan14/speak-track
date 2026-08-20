@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tokenize, overlapScore, pickLine } from './aligner'
+import { tokenize, overlapScore, pickLine, sticky } from './aligner'
 
 describe('tokenize', () => {
   it('lowercases, strips punctuation, and splits on whitespace', () => {
@@ -110,5 +110,32 @@ describe('pickLine', () => {
     const heardSentence0 = ['cat', 'sat', 'mat']
     const result = pickLine(heardSentence0, sentences, 2)
     expect(result.index).toBe(2)
+  })
+})
+
+describe('sticky', () => {
+  it('when winner is the same as cursor, returns cursor', () => {
+    expect(sticky(3, { index: 3, score: 0.8 }, 0.8)).toBe(3)
+  })
+
+  it('when winner is exactly cursor + 1, always returns cursor + 1', () => {
+    // One step forward is always accepted even with no margin at all
+    expect(sticky(3, { index: 4, score: 0.46 }, 0.44)).toBe(4)
+  })
+
+  it('when winner is cursor + 2 and score exceeds currentScore by more than margin, returns winner', () => {
+    expect(sticky(3, { index: 5, score: 0.70 }, 0.45)).toBe(5)
+  })
+
+  it('when winner is cursor + 2 and score only barely exceeds currentScore, stays at cursor', () => {
+    expect(sticky(3, { index: 5, score: 0.50 }, 0.45)).toBe(3)
+  })
+
+  it('when winner is cursor - 1 and does not exceed margin, stays at cursor', () => {
+    expect(sticky(3, { index: 2, score: 0.50 }, 0.45)).toBe(3)
+  })
+
+  it('when winner is cursor - 1 but score clearly exceeds margin, returns winner', () => {
+    expect(sticky(3, { index: 2, score: 0.80 }, 0.45)).toBe(2)
   })
 })

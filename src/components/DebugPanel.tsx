@@ -19,6 +19,7 @@ interface DebugPanelProps {
   onPrev: () => void
   onNext: () => void
   onSimulateNext: () => void
+  lostCount: number
 }
 
 const Panel = styled.div`
@@ -89,6 +90,7 @@ export default function DebugPanel({
   onPrev,
   onNext,
   onSimulateNext,
+  lostCount,
 }: DebugPanelProps) {
   const matchList =
     matches.length > 0
@@ -108,6 +110,7 @@ export default function DebugPanel({
         rank: {matchCursor + 1} / {matches.length || '—'}
       </Field>
       <Field>embed: {embedStatus}</Field>
+      <Field>lost: {lostCount}</Field>
       <Field>matches: {matchList}</Field>
       <Btn onClick={onPrev}>Prev</Btn>
       <Btn onClick={onNext}>Next</Btn>
