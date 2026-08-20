@@ -7,6 +7,14 @@ export const WORD_FOLLOW_THRESHOLD = 0.45
 // two nearby lines share common words.
 export const STICKINESS_MARGIN = 0.15
 
+// How many consecutive weak word-follow results must accumulate before the
+// follow loop falls back to embedding. Keeps API calls rare.
+export const LOST_BEFORE_MEANING = 3
+
+// Minimum cosine similarity for an embedding result to justify a jump.
+// Below this the cursor stays put even after the embedding call.
+export const MEANING_THRESHOLD = 0.4
+
 // Normalises a string into a list of lowercase alphanumeric tokens.
 // Strips punctuation so "hello," matches "hello" across script and transcript.
 export function tokenize(s: string): string[] {
