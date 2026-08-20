@@ -11,6 +11,7 @@ interface DebugPanelProps {
   matches: Match[]
   matchCursor: number
   mode: string
+  embedStatus: string
   onPrev: () => void
   onNext: () => void
   onSimulateNext: () => void
@@ -50,6 +51,7 @@ export default function DebugPanel({
   matches,
   matchCursor,
   mode,
+  embedStatus,
   onPrev,
   onNext,
   onSimulateNext,
@@ -67,6 +69,7 @@ export default function DebugPanel({
       <Field>
         rank: {matchCursor + 1} / {matches.length || '—'}
       </Field>
+      <Field>embed: {embedStatus}</Field>
       <Field>matches: {matchList}</Field>
       <Btn onClick={onPrev}>Prev</Btn>
       <Btn onClick={onNext}>Next</Btn>

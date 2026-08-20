@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
+import { useEmbedSentences } from '../hooks/useEmbedSentences'
 import DebugPanel from './DebugPanel'
 
 interface TeleprompterProps {
@@ -69,6 +70,15 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const [matchCursor, setMatchCursor] = useState(0)
   const activeRef = useRef<HTMLParagraphElement>(null)
 
+  const { data: vecs, isLoading: embedLoading, error: embedError } = useEmbedSentences(sentences)
+
+  // Derive a single status string for the debug panel.
+  const embedStatus = embedLoading
+    ? 'Embedding...'
+    : embedError
+      ? `Error: ${embedError.message}`
+      : `Ready (${(vecs ?? []).length} vectors)`
+
   // Scroll the highlighted sentence into the center of the scroller
   // whenever currentIndex changes, including on first entry (index 0).
   useEffect(() => {
@@ -121,6 +131,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
         matches={FAKE_MATCHES}
         matchCursor={matchCursor}
         mode="idle"
+        embedStatus={embedStatus}
         onPrev={handlePrev}
         onNext={handleNext}
         onSimulateNext={handleSimulateNext}

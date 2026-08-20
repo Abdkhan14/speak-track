@@ -12,6 +12,23 @@ export function cosine(a: number[], b: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1)
 }
 
+// Sends all sentences to OpenAI in one batch POST to /api/embed (proxied by
+// Vite to hide the API key). Returns vectors in the same order as the input.
+// Throws if the response is not ok so the caller can surface the error.
+export async function embedSentences(sentences: string[]): Promise<number[][]> {
+  const res = await fetch('/api/embed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input: sentences }),
+  })
+  if (!res.ok) throw new Error(`embed failed: ${res.status}`)
+  const json = await res.json() as { data: { index: number; embedding: number[] }[] }
+  // OpenAI may return items out of order — sort by index before returning.
+  return [...json.data]
+    .sort((a, b) => a.index - b.index)
+    .map((d) => d.embedding)
+}
+
 // Scores every sentence vector against a query vector, then returns the
 // top-k closest sentences in descending order with their original indexes.
 // Used by later PRs to jump to the best-matching line when word-overlap fails.

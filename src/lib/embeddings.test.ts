@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { cosine, rankSentences } from './embeddings'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { cosine, rankSentences, embedSentences } from './embeddings'
 
 describe('cosine', () => {
   it('when two identical unit vectors are compared, returns 1', () => {
@@ -63,5 +63,61 @@ describe('rankSentences', () => {
     const vecs = Array.from({ length: 8 }, () => [1, 0])
     const result = rankSentences(query, vecs)
     expect(result).toHaveLength(5)
+  })
+})
+
+describe('embedSentences', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('POSTs to /api/embed with the correct model and input sentences', async () => {
+    const fakeVec = [0.1, 0.2]
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          { index: 0, embedding: fakeVec },
+        ],
+      }),
+    } as Response)
+
+    await embedSentences(['hello world'])
+
+    expect(fetch).toHaveBeenCalledWith('/api/embed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'text-embedding-3-small', input: ['hello world'] }),
+    })
+  })
+
+  it('returns vectors in the same order as the input sentences', async () => {
+    // OpenAI may return data items out of order — sort by index before returning.
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          { index: 1, embedding: [0, 1] },
+          { index: 0, embedding: [1, 0] },
+        ],
+      }),
+    } as Response)
+
+    const result = await embedSentences(['first', 'second'])
+    expect(result[0]).toEqual([1, 0])
+    expect(result[1]).toEqual([0, 1])
+  })
+
+  it('throws when the response is not ok', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 401,
+    } as Response)
+
+    await expect(embedSentences(['hello'])).rejects.toThrow('embed failed: 401')
   })
 })
