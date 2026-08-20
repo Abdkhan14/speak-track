@@ -66,7 +66,7 @@ export function getSpeechRecognitionCtor(
 
 // Returns the last `max` whitespace-separated words from a transcript string.
 // Used to keep the debug panel from growing unbounded as the user speaks.
-export function lastHeardWords(transcript: string, max = 15): string {
+export function lastHeardWords(transcript: string, max = 12): string {
   if (!transcript.trim()) return ''
   const words = transcript.trim().split(/\s+/)
   return words.slice(-max).join(' ')

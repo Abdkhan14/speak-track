@@ -53,6 +53,9 @@ export function useSpeechRecognition(
     recognition.lang = 'en-US'
 
     recognition.onresult = (event) => {
+      // Chrome can fire one last onresult after stop() is called.
+      // Discard it so the follow loop does not move the highlight while paused.
+      if (pausedRef.current) return
       let utterance = ''
       for (let i = 0; i < event.results.length; i++) {
         utterance += event.results[i][0].transcript
