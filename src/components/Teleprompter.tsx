@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
+import { embedSentences, rankSentences } from '../lib/embeddings'
 import { useEmbedSentences } from '../hooks/useEmbedSentences'
 import DebugPanel from './DebugPanel'
 
@@ -9,7 +10,8 @@ interface TeleprompterProps {
   onBack: () => void
 }
 
-// Hardcoded ranked match list — replaced by real embeddings in a later PR.
+// Initial ranked list used before the first Find. Replaced by real scores
+// once the user types a phrase and presses Find (PR 15).
 const FAKE_MATCHES = [
   { index: 0, score: 0.91 },
   { index: 4, score: 0.55 },
@@ -68,6 +70,9 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const sentences = chunkSentences(text)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [matchCursor, setMatchCursor] = useState(0)
+  const [matches, setMatches] = useState(FAKE_MATCHES)
+  const [findQuery, setFindQuery] = useState('')
+  const [finding, setFinding] = useState(false)
   const activeRef = useRef<HTMLParagraphElement>(null)
 
   const { data: vecs, isLoading: embedLoading, error: embedError } = useEmbedSentences(sentences)
@@ -88,24 +93,40 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   // Jump to a match by cursor position. Clamps the sentence index so a
   // short script cannot point past the last sentence.
   function jumpToMatch(cursor: number) {
-    const match = FAKE_MATCHES[cursor]
+    const match = matches[cursor]
     setMatchCursor(cursor)
     setCurrentIndex(Math.min(match.index, sentences.length - 1))
   }
 
   function handlePrev() {
-    const next = (matchCursor - 1 + FAKE_MATCHES.length) % FAKE_MATCHES.length
+    const next = (matchCursor - 1 + matches.length) % matches.length
     jumpToMatch(next)
   }
 
   function handleNext() {
-    const next = (matchCursor + 1) % FAKE_MATCHES.length
+    const next = (matchCursor + 1) % matches.length
     jumpToMatch(next)
   }
 
   // Simulate next increments the sentence linearly — does not affect matchCursor.
   function handleSimulateNext() {
     setCurrentIndex((i) => Math.min(i + 1, sentences.length - 1))
+  }
+
+  // Embeds the typed query, ranks all sentence vectors, jumps to the top match.
+  async function handleFind() {
+    if (!vecs || finding || !findQuery.trim()) return
+    setFinding(true)
+    try {
+      const [queryVec] = await embedSentences([findQuery])
+      const ranked = rankSentences(queryVec, vecs)
+      console.log('ranked', ranked)
+      setMatches(ranked)
+      setMatchCursor(0)
+      setCurrentIndex(ranked[0].index)
+    } finally {
+      setFinding(false)
+    }
   }
 
   return (
@@ -128,10 +149,14 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
       <DebugPanel
         currentIndex={currentIndex}
         lastHeard=""
-        matches={FAKE_MATCHES}
+        matches={matches}
         matchCursor={matchCursor}
         mode="idle"
         embedStatus={embedStatus}
+        findQuery={findQuery}
+        onFindChange={setFindQuery}
+        onFind={handleFind}
+        finding={finding}
         onPrev={handlePrev}
         onNext={handleNext}
         onSimulateNext={handleSimulateNext}

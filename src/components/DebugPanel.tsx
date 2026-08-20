@@ -12,6 +12,10 @@ interface DebugPanelProps {
   matchCursor: number
   mode: string
   embedStatus: string
+  findQuery: string
+  onFindChange: (value: string) => void
+  onFind: () => void
+  finding: boolean
   onPrev: () => void
   onNext: () => void
   onSimulateNext: () => void
@@ -43,6 +47,32 @@ const Btn = styled.button`
   background: none;
   border: 1px solid #d1d5db;
   border-radius: 3px;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+`
+
+const FindRow = styled.div`
+  width: 100%;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`
+
+const FindInput = styled.input`
+  font-family: monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  flex: 1;
+  min-width: 0;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
 `
 
 export default function DebugPanel({
@@ -52,6 +82,10 @@ export default function DebugPanel({
   matchCursor,
   mode,
   embedStatus,
+  findQuery,
+  onFindChange,
+  onFind,
+  finding,
   onPrev,
   onNext,
   onSimulateNext,
@@ -60,6 +94,10 @@ export default function DebugPanel({
     matches.length > 0
       ? matches.map((m) => `i=${m.index} ${m.score.toFixed(2)}`).join('  ')
       : '—'
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') onFind()
+  }
 
   return (
     <Panel>
@@ -74,6 +112,20 @@ export default function DebugPanel({
       <Btn onClick={onPrev}>Prev</Btn>
       <Btn onClick={onNext}>Next</Btn>
       <Btn onClick={onSimulateNext}>Simulate next</Btn>
+      <FindRow>
+        <FindInput
+          value={findQuery}
+          onChange={(e) => onFindChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="what did I just say?"
+        />
+        <Btn
+          onClick={onFind}
+          disabled={finding || !findQuery.trim()}
+        >
+          {finding ? 'Finding...' : 'Find in script'}
+        </Btn>
+      </FindRow>
     </Panel>
   )
 }
