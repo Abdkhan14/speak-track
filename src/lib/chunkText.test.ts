@@ -54,4 +54,16 @@ describe('chunkSentences', () => {
       'Second sentence.',
     ])
   })
+
+  it('does not split on common abbreviations (Mr., Mrs., Dr., St., etc.)', () => {
+    expect(
+      chunkSentences(
+        'Mr. and Mrs. Dursley were proud. Dr. Smith agreed. St. Brutus was nearby.',
+      ),
+    ).toEqual([
+      'Mr. and Mrs. Dursley were proud.',
+      'Dr. Smith agreed.',
+      'St. Brutus was nearby.',
+    ])
+  })
 })
