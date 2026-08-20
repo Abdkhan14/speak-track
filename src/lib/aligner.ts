@@ -1,6 +1,10 @@
+// Minimum overlapScore for word-follow to accept a match without falling back
+// to embedding. Reused by the follow loop in later PRs.
+export const WORD_FOLLOW_THRESHOLD = 0.45
+
 // Normalises a string into a list of lowercase alphanumeric tokens.
 // Strips punctuation so "hello," matches "hello" across script and transcript.
-function tokenize(s: string): string[] {
+export function tokenize(s: string): string[] {
   return s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean)
 }
 
