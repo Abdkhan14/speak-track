@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { chunkSentences } from '../lib/chunkText'
 
 interface TeleprompterProps {
   text: string
@@ -34,24 +35,33 @@ const TextBlock = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 3rem 1.5rem;
-  font-family: sans-serif;
-  font-size: 1.25rem;
-  line-height: 1.8;
-  color: #1a1a1a;
-  white-space: pre-wrap;
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
 `
 
+const Sentence = styled.p`
+  font-family: sans-serif;
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: #1a1a1a;
+  margin: 0 0 1.5rem;
+`
+
 export default function Teleprompter({ text, onBack }: TeleprompterProps) {
+  const sentences = chunkSentences(text)
+
   return (
     <Overlay>
       <TopBar>
         <BackButton onClick={onBack}>← Back to edit</BackButton>
       </TopBar>
-      <TextBlock>{text}</TextBlock>
+      <TextBlock>
+        {sentences.map((sentence, index) => (
+          <Sentence key={index}>{sentence}</Sentence>
+        ))}
+      </TextBlock>
     </Overlay>
   )
 }
