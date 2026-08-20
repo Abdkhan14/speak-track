@@ -63,9 +63,9 @@ describe('lastHeardWords', () => {
     expect(lastHeardWords('alpha beta gamma', 1)).toBe('gamma')
   })
 
-  it('defaults to 15 words when max is omitted', () => {
+  it('defaults to 12 words when max is omitted', () => {
     const words = Array.from({ length: 20 }, (_, i) => `w${i}`).join(' ')
     const result = lastHeardWords(words)
-    expect(result.split(' ')).toHaveLength(15)
+    expect(result.split(' ')).toHaveLength(12)
   })
 })

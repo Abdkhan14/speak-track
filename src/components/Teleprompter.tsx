@@ -96,6 +96,8 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const { data: vecs, isLoading: embedLoading, error: embedError } = useEmbedSentences(sentences)
 
   const [paused, setPaused] = useState(false)
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
   const { lastHeard, mode } = useSpeechRecognition(isSpeechRecognitionSupported(), paused)
   const [followMode, setFollowMode] = useState<'idle' | 'words' | 'meaning'>('idle')
   const [lostCount, setLostCount] = useState(0)
@@ -174,7 +176,8 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
       setLostCount(0)
       setMatches(ranked)
       setMatchCursor(0)
-      if (ranked[0].score >= MEANING_THRESHOLD) {
+      // If the user paused while the embed call was in flight, don't jump.
+      if (!pausedRef.current && ranked[0].score >= MEANING_THRESHOLD) {
         setCurrentIndex(ranked[0].index)
         setFollowMode('meaning')
       }
@@ -192,7 +195,10 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   // Dep is only lastHeard so we fire on each new transcript update, not on
   // every cursor change — followRef always has the latest closure.
   useEffect(() => {
-    if (!lastHeard.trim()) return
+    // pausedRef catches the race where onresult already scheduled a setState
+    // before the pause flag flipped — the hook guard handles most cases but
+    // this ensures the follow loop never runs while paused.
+    if (pausedRef.current || !lastHeard.trim()) return
     void followRef.current(lastHeard)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastHeard])
