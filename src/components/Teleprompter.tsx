@@ -3,9 +3,9 @@ import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
 import { embedSentences, rankSentences } from '../lib/embeddings'
 import { useEmbedSentences } from '../hooks/useEmbedSentences'
-import { tokenize, pickLine, overlapScore, sticky, WORD_FOLLOW_THRESHOLD } from '../lib/aligner'
+import { tokenize, pickLine, overlapScore, sticky, WORD_FOLLOW_THRESHOLD, LOST_BEFORE_MEANING, MEANING_THRESHOLD } from '../lib/aligner'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
-import { isSpeechRecognitionSupported } from '../lib/speechRecognition'
+import { isSpeechRecognitionSupported, lastHeardWords } from '../lib/speechRecognition'
 import DebugPanel from './DebugPanel'
 
 interface TeleprompterProps {
@@ -159,16 +159,30 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
       return
     }
 
-    setLostCount((n) => n + 1)
+    const nextLost = lostCount + 1
+    setLostCount(nextLost)
+
+    // Accumulate weak results silently until the threshold is reached.
+    // Avoids an API call on every slightly-misheard phrase.
+    if (nextLost < LOST_BEFORE_MEANING) return
+
     if (!vecs) return
     setFinding(true)
     try {
-      const [queryVec] = await embedSentences([findQuery])
+      // Trim to 15 words so the embedding is proportional to what was just said.
+      const trimmed = lastHeardWords(findQuery)
+      const [queryVec] = await embedSentences([trimmed])
       const ranked = rankSentences(queryVec, vecs)
+      // Always reset so subsequent weak Finds don't pile up after the attempt.
+      setLostCount(0)
       setMatches(ranked)
       setMatchCursor(0)
-      setCurrentIndex(ranked[0].index)
-      setFollowMode('meaning')
+      if (ranked[0].score >= MEANING_THRESHOLD) {
+        setCurrentIndex(ranked[0].index)
+        setFollowMode('meaning')
+      }
+      // Below threshold: keep cursor, but still populate matches so Prev/Next
+      // shows the top guesses in the debug panel for inspection.
     } finally {
       setFinding(false)
     }
