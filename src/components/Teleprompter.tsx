@@ -138,14 +138,14 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
     setCurrentIndex((i) => Math.min(i + 1, sentences.length - 1))
   }
 
-  // Tries word overlap first. If the best score in the cursor window meets the
-  // threshold, jumps immediately with no API call (mode: words). Otherwise falls
-  // back to embedding + cosine rank (mode: meaning). setFinding only gates the
-  // embed branch so a verbatim match never flashes "Finding...".
-  async function handleFind() {
-    if (finding || !findQuery.trim()) return
+  // Core follow loop: word-overlap first, embedding fallback after 3 weak results.
+  // Shared by the typed Find box and the live mic effect.
+  // Uses a ref so the mic effect can always call the latest closure without
+  // being re-attached (same pattern as pausedRef in useSpeechRecognition).
+  async function followTranscript(text: string) {
+    if (finding || !text.trim()) return
 
-    const heard = tokenize(findQuery)
+    const heard = tokenize(text)
     const lexical = pickLine(heard, sentences, currentIndex)
     const currentScore = overlapScore(heard, sentences[currentIndex])
     const nextIndex = sticky(currentIndex, lexical, currentScore)
@@ -163,17 +163,14 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
     setLostCount(nextLost)
 
     // Accumulate weak results silently until the threshold is reached.
-    // Avoids an API call on every slightly-misheard phrase.
     if (nextLost < LOST_BEFORE_MEANING) return
 
     if (!vecs) return
     setFinding(true)
     try {
-      // Trim to 15 words so the embedding is proportional to what was just said.
-      const trimmed = lastHeardWords(findQuery)
+      const trimmed = lastHeardWords(text)
       const [queryVec] = await embedSentences([trimmed])
       const ranked = rankSentences(queryVec, vecs)
-      // Always reset so subsequent weak Finds don't pile up after the attempt.
       setLostCount(0)
       setMatches(ranked)
       setMatchCursor(0)
@@ -181,11 +178,27 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
         setCurrentIndex(ranked[0].index)
         setFollowMode('meaning')
       }
-      // Below threshold: keep cursor, but still populate matches so Prev/Next
-      // shows the top guesses in the debug panel for inspection.
     } finally {
       setFinding(false)
     }
+  }
+
+  // Stable ref so the mic effect always calls the latest followTranscript
+  // without being re-registered on every render.
+  const followRef = useRef(followTranscript)
+  followRef.current = followTranscript
+
+  // Drive the follow loop from the live mic transcript.
+  // Dep is only lastHeard so we fire on each new transcript update, not on
+  // every cursor change — followRef always has the latest closure.
+  useEffect(() => {
+    if (!lastHeard.trim()) return
+    void followRef.current(lastHeard)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastHeard])
+
+  function handleFind() {
+    void followRef.current(findQuery)
   }
 
   return (
