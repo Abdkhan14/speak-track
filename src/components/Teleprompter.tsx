@@ -24,11 +24,14 @@ const Overlay = styled.div`
 
 const TopBar = styled.div`
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
 `
 
-const BackButton = styled.button`
+const TopBarButton = styled.button`
   padding: 0.4rem 0.875rem;
   font-family: sans-serif;
   font-size: 0.875rem;
@@ -36,6 +39,26 @@ const BackButton = styled.button`
   background: none;
   border: 1px solid #d1d5db;
   border-radius: 4px;
+`
+
+const BackButton = TopBarButton
+
+const PauseListeningButton = styled(TopBarButton)`
+  color: #dc2626;
+  border-color: #fca5a5;
+
+  &:hover {
+    background: #fef2f2;
+  }
+`
+
+const ResumeListeningButton = styled(TopBarButton)`
+  color: #16a34a;
+  border-color: #86efac;
+
+  &:hover {
+    background: #f0fdf4;
+  }
 `
 
 const TextBlock = styled.div`
@@ -71,7 +94,8 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
 
   const { data: vecs, isLoading: embedLoading, error: embedError } = useEmbedSentences(sentences)
 
-  const { lastHeard, mode } = useSpeechRecognition(isSpeechRecognitionSupported())
+  const [paused, setPaused] = useState(false)
+  const { lastHeard, mode } = useSpeechRecognition(isSpeechRecognitionSupported(), paused)
 
   // Derive a single status string for the debug panel.
   const embedStatus = embedLoading
@@ -130,6 +154,11 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
     <Overlay>
       <TopBar>
         <BackButton onClick={onBack}>← Back to edit</BackButton>
+        {mode !== 'idle' && (
+          paused
+            ? <ResumeListeningButton onClick={() => setPaused(false)}>Resume Listening</ResumeListeningButton>
+            : <PauseListeningButton onClick={() => setPaused(true)}>Pause Listening</PauseListeningButton>
+        )}
       </TopBar>
       <TextBlock>
         {sentences.map((sentence, index) => (
