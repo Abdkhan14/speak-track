@@ -3,6 +3,8 @@ import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
 import { embedSentences, rankSentences } from '../lib/embeddings'
 import { useEmbedSentences } from '../hooks/useEmbedSentences'
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { isSpeechRecognitionSupported } from '../lib/speechRecognition'
 import DebugPanel from './DebugPanel'
 
 interface TeleprompterProps {
@@ -68,6 +70,8 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const activeRef = useRef<HTMLParagraphElement>(null)
 
   const { data: vecs, isLoading: embedLoading, error: embedError } = useEmbedSentences(sentences)
+
+  const { lastHeard, mode } = useSpeechRecognition(isSpeechRecognitionSupported())
 
   // Derive a single status string for the debug panel.
   const embedStatus = embedLoading
@@ -141,10 +145,10 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
       </TextBlock>
       <DebugPanel
         currentIndex={currentIndex}
-        lastHeard=""
+        lastHeard={lastHeard}
         matches={matches}
         matchCursor={matchCursor}
-        mode="idle"
+        mode={mode}
         embedStatus={embedStatus}
         findQuery={findQuery}
         onFindChange={setFindQuery}
