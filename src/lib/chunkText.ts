@@ -7,6 +7,22 @@ const SENTENCE_TERMINATORS = new Set(['.', '!', '?'])
 // raising it would incorrectly absorb normal short sentences like "I see."
 const FRAGMENT_WORD_THRESHOLD = 2
 
+// Words that end with a period but are NOT sentence boundaries.
+// When a '.' immediately follows one of these (case-insensitive), we skip
+// the split so "Mr. Smith" stays in one chunk rather than becoming two blocks.
+const ABBREVIATIONS = new Set([
+  // Titles
+  'mr', 'mrs', 'ms', 'dr', 'prof', 'sr', 'jr', 'rev', 'esq',
+  // Military / official ranks
+  'gen', 'sgt', 'lt', 'cpl', 'pvt', 'maj', 'capt', 'col', 'adm', 'brig',
+  // Places / addresses
+  'st', 'mt', 'ft', 'blvd', 'ave', 'rd',
+  // Latin / common shorthand
+  'vs', 'etc', 'eg', 'ie', 'approx', 'est',
+  // Academic / publishing
+  'dept', 'govt', 'fig', 'vol', 'no', 'pp', 'ch',
+])
+
 export function chunkSentences(text: string): string[] {
   // --- Phase 1: split into raw sentence parts ---
   // Walk character-by-character rather than using a lookbehind regex, because
@@ -19,13 +35,22 @@ export function chunkSentences(text: string): string[] {
     current += ch
 
     // When we hit a terminator that is followed by whitespace, we've reached a
-    // sentence boundary — seal the current sentence and advance past the gap.
+    // potential sentence boundary — but first check it isn't an abbreviation.
     if (SENTENCE_TERMINATORS.has(ch)) {
       const next = text[i + 1]
       if (next !== undefined && /\s/.test(next)) {
+        // Extract the word that just ended (letters/digits before the terminator).
+        const wordMatch = current.match(/(\w+)[.!?]$/)
+        const word = wordMatch ? wordMatch[1].toLowerCase() : ''
+
+        if (ABBREVIATIONS.has(word)) {
+          // e.g. "Mr. " — keep accumulating, not a real sentence end.
+          continue
+        }
+
+        // Real sentence boundary: seal and advance past the whitespace gap.
         parts.push(current)
         current = ''
-        // Consume all whitespace so the next sentence starts clean.
         while (i + 1 < text.length && /\s/.test(text[i + 1])) {
           i++
         }
