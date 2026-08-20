@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
 
@@ -57,6 +57,13 @@ const Sentence = styled.p<{ $active: boolean }>`
 export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const sentences = chunkSentences(text)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const activeRef = useRef<HTMLParagraphElement>(null)
+
+  // Scroll the highlighted sentence into the center of the scroller
+  // whenever currentIndex changes, including on first entry (index 0).
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [currentIndex])
 
   return (
     <Overlay>
@@ -67,6 +74,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
         {sentences.map((sentence, index) => (
           <Sentence
             key={index}
+            ref={index === currentIndex ? activeRef : null}
             $active={index === currentIndex}
             onClick={() => setCurrentIndex(index)}
           >
