@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styled from 'styled-components'
 
 const MAX_SCRIPT_CHARS = 12000
+const DRAFT_KEY = 'speak-track.draft'
 
 const Wrapper = styled.div`
   display: flex;
@@ -35,8 +36,19 @@ const Count = styled.p`
   text-align: right;
 `
 
+function loadDraft(): string {
+  const stored = localStorage.getItem(DRAFT_KEY) ?? ''
+  return stored.slice(0, MAX_SCRIPT_CHARS)
+}
+
 export default function SpeechEditor() {
-  const [text, setText] = useState('')
+  const [text, setText] = useState(loadDraft)
+
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value
+    setText(value)
+    localStorage.setItem(DRAFT_KEY, value)
+  }
 
   return (
     <Wrapper>
@@ -44,7 +56,7 @@ export default function SpeechEditor() {
         placeholder="Paste your speech here…"
         value={text}
         maxLength={MAX_SCRIPT_CHARS}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleChange}
       />
       <Count>
         {text.length} / {MAX_SCRIPT_CHARS.toLocaleString()}
