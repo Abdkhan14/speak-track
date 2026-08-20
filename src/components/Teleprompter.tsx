@@ -10,14 +10,6 @@ interface TeleprompterProps {
   onBack: () => void
 }
 
-// Initial ranked list used before the first Find. Replaced by real scores
-// once the user types a phrase and presses Find (PR 15).
-const FAKE_MATCHES = [
-  { index: 0, score: 0.91 },
-  { index: 4, score: 0.55 },
-  { index: 8, score: 0.48 },
-  { index: 12, score: 0.42 },
-]
 
 const Overlay = styled.div`
   position: fixed;
@@ -70,7 +62,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const sentences = chunkSentences(text)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [matchCursor, setMatchCursor] = useState(0)
-  const [matches, setMatches] = useState(FAKE_MATCHES)
+  const [matches, setMatches] = useState<{ index: number; score: number }[]>([])
   const [findQuery, setFindQuery] = useState('')
   const [finding, setFinding] = useState(false)
   const activeRef = useRef<HTMLParagraphElement>(null)
@@ -99,11 +91,13 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   }
 
   function handlePrev() {
+    if (matches.length === 0) return
     const next = (matchCursor - 1 + matches.length) % matches.length
     jumpToMatch(next)
   }
 
   function handleNext() {
+    if (matches.length === 0) return
     const next = (matchCursor + 1) % matches.length
     jumpToMatch(next)
   }
