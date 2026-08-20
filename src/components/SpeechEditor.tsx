@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 
+interface SpeechEditorProps {
+  onStartSpeaking: (text: string) => void
+}
+
 const MAX_SCRIPT_CHARS = 12000
 const DRAFT_KEY = 'speak-track.draft'
 
@@ -36,12 +40,24 @@ const Count = styled.p`
   text-align: right;
 `
 
+const StartButton = styled.button`
+  align-self: flex-end;
+  padding: 0.5rem 1.25rem;
+  font-family: sans-serif;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: #1a1a1a;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+`
+
 function loadDraft(): string {
   const stored = localStorage.getItem(DRAFT_KEY) ?? ''
   return stored.slice(0, MAX_SCRIPT_CHARS)
 }
 
-export default function SpeechEditor() {
+export default function SpeechEditor({ onStartSpeaking }: SpeechEditorProps) {
   const [text, setText] = useState(loadDraft)
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -61,6 +77,9 @@ export default function SpeechEditor() {
       <Count>
         {text.length} / {MAX_SCRIPT_CHARS.toLocaleString()}
       </Count>
+      <StartButton onClick={() => onStartSpeaking(text)}>
+        Start speaking
+      </StartButton>
     </Wrapper>
   )
 }
