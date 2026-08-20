@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
 import { embedSentences, rankSentences } from '../lib/embeddings'
 import { useEmbedSentences } from '../hooks/useEmbedSentences'
+import { tokenize, pickLine, WORD_FOLLOW_THRESHOLD } from '../lib/aligner'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { isSpeechRecognitionSupported } from '../lib/speechRecognition'
 import DebugPanel from './DebugPanel'
@@ -96,6 +97,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
 
   const [paused, setPaused] = useState(false)
   const { lastHeard, mode } = useSpeechRecognition(isSpeechRecognitionSupported(), paused)
+  const [followMode, setFollowMode] = useState<'idle' | 'words' | 'meaning'>('idle')
 
   // Derive a single status string for the debug panel.
   const embedStatus = embedLoading
@@ -135,9 +137,25 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
     setCurrentIndex((i) => Math.min(i + 1, sentences.length - 1))
   }
 
-  // Embeds the typed query, ranks all sentence vectors, jumps to the top match.
+  // Tries word overlap first. If the best score in the cursor window meets the
+  // threshold, jumps immediately with no API call (mode: words). Otherwise falls
+  // back to embedding + cosine rank (mode: meaning). setFinding only gates the
+  // embed branch so a verbatim match never flashes "Finding...".
   async function handleFind() {
-    if (!vecs || finding || !findQuery.trim()) return
+    if (finding || !findQuery.trim()) return
+
+    const heard = tokenize(findQuery)
+    const lexical = pickLine(heard, sentences, currentIndex)
+
+    if (lexical.score >= WORD_FOLLOW_THRESHOLD) {
+      setMatches([{ index: lexical.index, score: lexical.score }])
+      setMatchCursor(0)
+      setCurrentIndex(lexical.index)
+      setFollowMode('words')
+      return
+    }
+
+    if (!vecs) return
     setFinding(true)
     try {
       const [queryVec] = await embedSentences([findQuery])
@@ -145,6 +163,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
       setMatches(ranked)
       setMatchCursor(0)
       setCurrentIndex(ranked[0].index)
+      setFollowMode('meaning')
     } finally {
       setFinding(false)
     }
@@ -177,7 +196,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
         lastHeard={lastHeard}
         matches={matches}
         matchCursor={matchCursor}
-        mode={mode}
+        mode={followMode}
         embedStatus={embedStatus}
         findQuery={findQuery}
         onFindChange={setFindQuery}

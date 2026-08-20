@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { overlapScore, pickLine } from './aligner'
+import { tokenize, overlapScore, pickLine } from './aligner'
+
+describe('tokenize', () => {
+  it('lowercases, strips punctuation, and splits on whitespace', () => {
+    expect(tokenize('Hello, world!')).toEqual(['hello', 'world'])
+  })
+
+  it('returns an empty array for an empty string', () => {
+    expect(tokenize('')).toEqual([])
+  })
+
+  it('handles numbers', () => {
+    expect(tokenize('PR 21 is ready')).toEqual(['pr', '21', 'is', 'ready'])
+  })
+})
 
 describe('overlapScore', () => {
   it('when heard is empty, returns 0', () => {
