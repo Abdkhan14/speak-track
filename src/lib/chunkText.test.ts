@@ -23,7 +23,7 @@ describe('chunkSentences', () => {
     ])
   })
 
-  it('glues a short fragment (< 4 words) onto the previous sentence', () => {
+  it('glues a single-word fragment onto the previous sentence', () => {
     // "OK." is only 1 word — gets merged onto "That is fine."
     expect(chunkSentences('That is fine. OK. Now we continue.')).toEqual([
       'That is fine. OK.',
