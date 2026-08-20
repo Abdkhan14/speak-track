@@ -120,7 +120,6 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
     try {
       const [queryVec] = await embedSentences([findQuery])
       const ranked = rankSentences(queryVec, vecs)
-      console.log('ranked', ranked)
       setMatches(ranked)
       setMatchCursor(0)
       setCurrentIndex(ranked[0].index)
