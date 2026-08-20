@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { chunkSentences } from '../lib/chunkText'
 import { embedSentences, rankSentences } from '../lib/embeddings'
 import { useEmbedSentences } from '../hooks/useEmbedSentences'
-import { tokenize, pickLine, WORD_FOLLOW_THRESHOLD } from '../lib/aligner'
+import { tokenize, pickLine, overlapScore, sticky, WORD_FOLLOW_THRESHOLD } from '../lib/aligner'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { isSpeechRecognitionSupported } from '../lib/speechRecognition'
 import DebugPanel from './DebugPanel'
@@ -98,6 +98,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
   const [paused, setPaused] = useState(false)
   const { lastHeard, mode } = useSpeechRecognition(isSpeechRecognitionSupported(), paused)
   const [followMode, setFollowMode] = useState<'idle' | 'words' | 'meaning'>('idle')
+  const [lostCount, setLostCount] = useState(0)
 
   // Derive a single status string for the debug panel.
   const embedStatus = embedLoading
@@ -146,15 +147,19 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
 
     const heard = tokenize(findQuery)
     const lexical = pickLine(heard, sentences, currentIndex)
+    const currentScore = overlapScore(heard, sentences[currentIndex])
+    const nextIndex = sticky(currentIndex, lexical, currentScore)
 
     if (lexical.score >= WORD_FOLLOW_THRESHOLD) {
-      setMatches([{ index: lexical.index, score: lexical.score }])
+      setLostCount(0)
+      setMatches([{ index: nextIndex, score: lexical.score }])
       setMatchCursor(0)
-      setCurrentIndex(lexical.index)
+      setCurrentIndex(nextIndex)
       setFollowMode('words')
       return
     }
 
+    setLostCount((n) => n + 1)
     if (!vecs) return
     setFinding(true)
     try {
@@ -205,6 +210,7 @@ export default function Teleprompter({ text, onBack }: TeleprompterProps) {
         onPrev={handlePrev}
         onNext={handleNext}
         onSimulateNext={handleSimulateNext}
+        lostCount={lostCount}
       />
     </Overlay>
   )
